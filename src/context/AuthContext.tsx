@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 interface AuthContextType {
     session: Session | null | undefined;
-    signUpNewUser: (args: {email: string; password: string}) => Promise<AuthResult>;
+    signUpNewUser: (args: {username: string, email: string; password: string}) => Promise<AuthResult>;
     signInUser: (args: {email: string; password: string}) => Promise<AuthResult>;
     signOut: () => Promise<void>;
 }
@@ -23,14 +23,17 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
     const [session, setSession] = useState<Session | null | undefined>(undefined);
 
     //sign up
-    const signUpNewUser = async ({email, password}: {email: string, password: string}): Promise<AuthResult> => {
+    const signUpNewUser = async ({username, email, password}: {username: string, email: string, password: string}): Promise<AuthResult> => {
         const {data, error} = await supabase.auth.signUp({
             email: email,
-            password: password
+            password: password,
+            options: {
+                data: {username} //read by the trigger
+            }
         });
 
         if(error) {
-            console.error('There was a problem signing up: ', error);
+            if(import.meta.env.DEV) console.error('There was a problem signing up: ', error);
             return {success: false, error};
         } else {
             return {success: true, data}
@@ -39,23 +42,17 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
 
     //sign in
     const signInUser = async ({email, password}: {email: string, password: string}): Promise<AuthResult> => {
-        try {
-            const {data, error} = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
+        const {data, error} = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
 
-            if(error) {
-                console.error('sign in error occured, ', error);
-                return { success: false, error};
-            } else {
-                console.log('sign-in success: ', data);
-                return {success: true, data};
-            }
-
-        } catch(error) {
-            console.error('An error occured signing in, ', error);
-            return {success: false, error: error as AuthError}
+        if(error) {
+            if(import.meta.env.DEV) console.error('sign in error occured, ', error);
+            return { success: false, error};
+        } else {
+            if(import.meta.env.DEV) console.log('sign-in success: ', data);
+            return {success: true, data};
         }
     }
 
@@ -75,7 +72,7 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
         const {error} = await supabase.auth.signOut();
 
         if(error) {
-            console.error("There was an error signing out: ", error);
+            if(import.meta.env.DEV) console.error("There was an error signing out: ", error);
         }
     };
 
