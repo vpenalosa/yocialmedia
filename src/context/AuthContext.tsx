@@ -4,8 +4,14 @@ import type { Session, AuthError } from "@supabase/supabase-js";
 import type { ReactNode } from "react";
 // import { AuthError } from "@supabase/supabase-js";
 
+type Profile = {
+    id: string,
+    username: string
+}
+
 interface AuthContextType {
     session: Session | null | undefined;
+    profile: Profile | null;
     signUpNewUser: (args: {username: string, email: string; password: string}) => Promise<AuthResult>;
     signInUser: (args: {email: string; password: string}) => Promise<AuthResult>;
     signOut: () => Promise<void>;
@@ -21,6 +27,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthContextProvider = ({children}: {children: ReactNode}) => {
     const [session, setSession] = useState<Session | null | undefined>(undefined);
+    const [profile, setProfile] = useState<Profile | null>(null);
+
+    //fetch the username from the public table
+    async function fetchProfile(userId: string) {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId) //basically a where clause, return row if it matches the userid
+            .single() //return only 1 row
+
+        if(error) {
+            if (import.meta.env.DEV) console.error('Error fetching profile: ', error);
+            return;
+        }
+
+        setProfile(data);
+    }
 
     //sign up
     const signUpNewUser = async ({username, email, password}: {username: string, email: string, password: string}): Promise<AuthResult> => {
@@ -64,7 +87,13 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
 
         supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
-        })
+
+            if(session?.user) {
+                fetchProfile(session.user.id);
+            } else {
+                setProfile(null);
+            }
+        });
     }, []);
 
     //sign out
@@ -77,7 +106,7 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
     };
 
     return (
-        <AuthContext.Provider value={{session, signUpNewUser, signInUser, signOut}}>
+        <AuthContext.Provider value={{session, profile, signUpNewUser, signInUser, signOut}}>
             {children}
         </AuthContext.Provider>
     )
