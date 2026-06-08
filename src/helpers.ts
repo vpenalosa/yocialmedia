@@ -43,3 +43,10 @@ export function mapSignUpError(message: string): string {
     if (message.includes('Database error saving new user')) return 'That username is already taken!';
     return 'Signup failed. Please try again!';
 }
+
+export function mapSignInError(message: string): string {
+    if (message.includes('Invalid login credentials')) return 'Incorrect email or password.';
+    if (message.includes('Email not confirmed')) return 'Please verify your email before signing in.';
+    if (message.includes('over_request_rate_limit') || message.includes('rate limit')) return 'Too many attempts. Please wait a moment and try again.';
+    return 'Sign in failed. Please try again.';
+}

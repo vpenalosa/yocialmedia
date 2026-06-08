@@ -1,10 +1,10 @@
-import { createContext, useEffect, useState, useContext } from "react";
+import { createContext, useEffect, useState, useContext, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import type { Session, AuthError } from "@supabase/supabase-js";
 import type { ReactNode } from "react";
 // import { AuthError } from "@supabase/supabase-js";
 
-type Profile = {
+export type Profile = {
     id: string,
     username: string
 }
@@ -15,6 +15,7 @@ interface AuthContextType {
     signUpNewUser: (args: {username: string, email: string; password: string}) => Promise<AuthResult>;
     signInUser: (args: {email: string; password: string}) => Promise<AuthResult>;
     signOut: () => Promise<void>;
+    loading: boolean;
 }
 
 interface AuthResult {
@@ -28,21 +29,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthContextProvider = ({children}: {children: ReactNode}) => {
     const [session, setSession] = useState<Session | null | undefined>(undefined);
     const [profile, setProfile] = useState<Profile | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
 
     //fetch the username from the public table
     async function fetchProfile(userId: string) {
+        console.log('fetchProfile called for:');
+
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', userId) //basically a where clause, return row if it matches the userid
             .single() //return only 1 row
 
+        console.log('fetchProfile result:', { data, error });
+
         if(error) {
             if (import.meta.env.DEV) console.error('Error fetching profile: ', error);
             return;
         }
 
+        console.log('calling setProfile with:', data);
         setProfile(data);
+        console.log('setProfile called');
     }
 
     //sign up
@@ -79,22 +87,62 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
         }
     }
 
-    //useeffect maintaining session
+    // useEffect(() => {
+    //     const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    //         async (_event, session) => {
+    //             console.log('auth event:', _event);
+
+    //             setSession(session);
+
+    //             if (session?.user) {
+    //                 await fetchProfile(session.user.id);
+    //             } else {
+    //                 setProfile(null);
+    //             }
+
+    //             setLoading(false);
+    //         }
+    //     );
+
+    //     return () => subscription.unsubscribe();
+    // }, []);
+
     useEffect(() => {
-        supabase.auth.getSession().then(({data: {session}}) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            console.log('onAuthStateChange fired:', _event, 'session:', !!session);
             setSession(session);
-        });
-
-        supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-
-            if(session?.user) {
-                fetchProfile(session.user.id);
-            } else {
+            if (!session) {
+                console.log('setting profile to null because no session');
                 setProfile(null);
+                setLoading(false);
             }
         });
+
+        return () => subscription.unsubscribe();
     }, []);
+
+    // separate effect that runs when session changes
+    useEffect(() => {
+        console.log('session useEffect fired, session:', session?.user?.id ?? 'null', 'undefined?', session === undefined);
+
+        if (session === undefined) return;
+
+        //fetch the username
+        if (session?.user) {
+            supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single()
+                .then(({ data, error }) => {
+                    console.log('inline fetch result:', data, error);
+                    if (!error && data) {
+                        setProfile(data);
+                    }
+                    setLoading(false);
+                });
+        }
+    }, [session]);
 
     //sign out
     const signOut = async () => {
@@ -105,11 +153,13 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
         }
     };
 
+    console.log('Provider rendering with profile:', profile);
+
     return (
-        <AuthContext.Provider value={{session, profile, signUpNewUser, signInUser, signOut}}>
-            {children}
-        </AuthContext.Provider>
-    )
+    <AuthContext.Provider value={{session, profile, signUpNewUser, signInUser, signOut, loading}}>
+        {children}
+    </AuthContext.Provider>
+)
 }
 
 export const UserAuth = () => {
