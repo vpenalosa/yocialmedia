@@ -1,8 +1,7 @@
-import { createContext, useEffect, useState, useContext, useMemo } from "react";
+import { createContext, useEffect, useState, useContext } from "react";
 import { supabase } from "../supabaseClient";
 import type { Session, AuthError } from "@supabase/supabase-js";
 import type { ReactNode } from "react";
-// import { AuthError } from "@supabase/supabase-js";
 
 export type Profile = {
     id: string,
@@ -33,7 +32,6 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
 
     //fetch the username from the public table
     async function fetchProfile(userId: string) {
-        console.log('fetchProfile called for:');
 
         const { data, error } = await supabase
             .from('profiles')
@@ -41,16 +39,12 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
             .eq('id', userId) //basically a where clause, return row if it matches the userid
             .single() //return only 1 row
 
-        console.log('fetchProfile result:', { data, error });
-
         if(error) {
             if (import.meta.env.DEV) console.error('Error fetching profile: ', error);
             return;
         }
 
-        console.log('calling setProfile with:', data);
         setProfile(data);
-        console.log('setProfile called');
     }
 
     //sign up
@@ -82,37 +76,14 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
             if(import.meta.env.DEV) console.error('sign in error occured, ', error);
             return { success: false, error};
         } else {
-            if(import.meta.env.DEV) console.log('sign-in success: ', data);
             return {success: true, data};
         }
     }
 
-    // useEffect(() => {
-    //     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    //         async (_event, session) => {
-    //             console.log('auth event:', _event);
-
-    //             setSession(session);
-
-    //             if (session?.user) {
-    //                 await fetchProfile(session.user.id);
-    //             } else {
-    //                 setProfile(null);
-    //             }
-
-    //             setLoading(false);
-    //         }
-    //     );
-
-    //     return () => subscription.unsubscribe();
-    // }, []);
-
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            console.log('onAuthStateChange fired:', _event, 'session:', !!session);
             setSession(session);
             if (!session) {
-                console.log('setting profile to null because no session');
                 setProfile(null);
                 setLoading(false);
             }
@@ -123,7 +94,6 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
 
     // separate effect that runs when session changes
     useEffect(() => {
-        console.log('session useEffect fired, session:', session?.user?.id ?? 'null', 'undefined?', session === undefined);
 
         if (session === undefined) return;
 
@@ -135,7 +105,6 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
                 .eq('id', session.user.id)
                 .single()
                 .then(({ data, error }) => {
-                    console.log('inline fetch result:', data, error);
                     if (!error && data) {
                         setProfile(data);
                     }
@@ -152,8 +121,6 @@ export const AuthContextProvider = ({children}: {children: ReactNode}) => {
             if(import.meta.env.DEV) console.error("There was an error signing out: ", error);
         }
     };
-
-    console.log('Provider rendering with profile:', profile);
 
     return (
     <AuthContext.Provider value={{session, profile, signUpNewUser, signInUser, signOut, loading}}>
