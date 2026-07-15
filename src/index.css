@@ -1,4 +1,6 @@
+@layer radix;
 @import "tailwindcss";
+@import "@radix-ui/themes/styles.css" layer(radix);
 
 :root {
   --text: #6b6375;

@@ -1,4 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
+import VideoCard from "./VideoCard";
+import TrickGrid from "./TrickGrid";
 
 function Home() {
     const navigate = useNavigate();
@@ -10,6 +12,8 @@ function Home() {
             <button><Link to="/signup">Sign Up</Link></button>
             <br />
             <button><Link to="/dashboard">Dashboard</Link></button> {/* TODO change this later to only show up if logged in */}
+
+            <TrickGrid />
         </div>
     )
 }
