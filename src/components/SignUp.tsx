@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { UserAuth } from "../context/AuthContext";
-import { validationMethods, mapSignUpError } from "../helpers";
+import { validationMethods, mapSignUpError } from "../server/helpers";
 import { Eye, EyeOff } from 'lucide-react';
 import type {SyntheticEvent} from "react";
 
