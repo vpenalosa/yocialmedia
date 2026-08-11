@@ -1,8 +1,8 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'  
 import './App.css'
 
-import SignIn from './components/SignIn';
-import SignUp from './components/SignUp';
+import SignIn from '../components/SignIn.ts';
+import SignUp from '../components/SignUp.ts';
 
 function App() {
 

@@ -7,6 +7,7 @@ interface VideoProps {
     videoTitle: string;
     viewerUserId: string;
     description: string;
+    // tags: [string];
 }
 
 function VideoCard(props : VideoProps) {
